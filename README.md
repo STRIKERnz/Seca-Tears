@@ -2,6 +2,8 @@
 
 A RuneLite plugin that reminds you to equip your **Magic secateurs** before picking or harvesting crops that benefit from them.
 
+<img width="1254" height="1254" alt="Image" src="https://github.com/user-attachments/assets/7fa6fa75-ba5a-4167-a3fe-31fe1dcb5cdf" />
+
 ## What it does
 
 When you do **not** have Magic secateurs equipped or in your inventory:
