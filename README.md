@@ -8,9 +8,11 @@ A RuneLite plugin that reminds you to equip your **Magic secateurs** before pick
 
 When you do **not** have Magic secateurs equipped or in your inventory:
 
-- **Moves "Pick" or "Harvest" below "Inspect"** in the right-click menu, making accidental mis-clicks less likely.
+- **Moves "Pick" or "Harvest" below "Inspect"** in farming patch menus, or below
+  "Walk here" for Herbiboar, making accidental mis-clicks less likely.
 - **Changes the left-click action** away from "Pick"/"Harvest", so a single click no longer immediately harvests the patch.
-- **Warns you** if you still click "Pick" or "Harvest" — via a **chat message** and/or **overhead text** above your character.
+- **Warns you** if you still click "Pick" or "Harvest" from a supported menu, via a **chat message**
+  and/or **overhead text** above your character.
 
 When you have Magic secateurs equipped or in your inventory, all behaviour returns to normal.
 
@@ -22,8 +24,12 @@ This applies to crops where secateurs actually increase yield:
 - Allotments and hops (Harvest)
 - Celastrus trees, grape vines, coral nurseries, and Herbiboars
 
-It does **not** affect crops where secateurs have no effect, including most trees,
-mushrooms, cacti, belladonna, seaweed, hespori, pineapple plants, and
+It only considers real farming patch object menus, plus Herbiboar NPC menus.
+Inventory, widget, player, overlay, and ground-item menus are ignored, so world
+item pickups are not reordered or warned on even if their text looks similar.
+
+It does **not** affect crops where secateurs have no effect, including most
+trees, mushrooms, cacti, belladonna, seaweed, hespori, pineapple plants, and
 non-limpwurt flowers.
 
 ## Why it matters
@@ -52,11 +58,20 @@ Overhead text duration in ticks (default: 5, ~3 s)
 
 ## Changelog
 
+1.1.0 - 2026-05-02
+  - Restricted matching to farming patch object menus and Herbiboar NPC menus
+  - Ignored ground items, inventory items, widgets, player menus, and RuneLite
+    overlay menus even when their text looks similar
+  - Improved warning handling and overhead text cleanup so only this plugin's
+    own overhead warning text is cleared
+  - Tightened menu text normalization and exact action/target matching to reduce
+    false positives while keeping supported Magic secateurs yield sources
+
 1.0.1 - 2026-05-01
   - Fixed overly broad Pick matching so unrelated Pick actions are no longer
     moved or warned on
-  - Restricted warnings and menu reordering to actions whose targets match
-    crops affected by Magic secateurs
+  - Restricted warnings and menu reordering to explicit supported actions and
+    crop targets affected by Magic secateurs
   - Added coverage for current Magic secateurs yield sources: celastrus trees,
     grape vines, coral nurseries, and Herbiboars
   - Improved menu handling performance by sharing reorder logic, reordering
@@ -64,8 +79,6 @@ Overhead text duration in ticks (default: 5, ~3 s)
     secateurs inventory/equipment checks until those containers change
   - Removed deprecated RuneLite client menu API usage in favour of the current
     Menu API
-
-**Fix** - Pickpocket NPC no longer triggers overhead text and chat message
 
 1.0.0 - 2026-05-01
   - Initial release
