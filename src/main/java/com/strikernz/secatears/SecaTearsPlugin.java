@@ -7,7 +7,9 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Menu;
+import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
+import net.runelite.api.NPC;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuEntryAdded;
@@ -15,6 +17,9 @@ import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
+import net.runelite.api.gameval.NpcID;
+import net.runelite.api.gameval.ObjectID;
+import net.runelite.api.gameval.ObjectID1;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -32,38 +37,6 @@ public class SecaTearsPlugin extends Plugin
 	private static final String PICKPOCKET = "pickpocket";
 	private static final String HARVEST = "harvest";
 	private static final String INSPECT = "inspect";
-
-	private static final String[] SECATEURS_PICK_TARGETS = {
-		"herb",
-		"limpwurt",
-		"berry",
-		"poison ivy",
-		"grape"
-	};
-
-	private static final String[] SECATEURS_HARVEST_TARGETS = {
-		"allotment",
-		"potato",
-		"onion",
-		"cabbage",
-		"tomato",
-		"sweetcorn",
-		"strawberry",
-		"watermelon",
-		"snape grass",
-		"hops",
-		"barley",
-		"hammerstone",
-		"asgarnian",
-		"jute",
-		"yanillian",
-		"krandorian",
-		"wildblood",
-		"celastrus",
-		"grape",
-		"coral nursery",
-		"herbiboar"
-	};
 
 	@Inject
 	private Client client;
@@ -120,7 +93,7 @@ public class SecaTearsPlugin extends Plugin
 			return;
 		}
 
-		if (!isSecateursAction(event.getOption(), event.getTarget()))
+		if (!isSecateursAction(event.getMenuEntry()))
 		{
 			return;
 		}
@@ -143,7 +116,7 @@ public class SecaTearsPlugin extends Plugin
 			return;
 		}
 
-		if (!isSecateursAction(event.getMenuOption(), event.getMenuTarget()))
+		if (!isSecateursAction(event.getMenuEntry()))
 		{
 			return;
 		}
@@ -194,8 +167,8 @@ public class SecaTearsPlugin extends Plugin
 	 *
 	 * Pick: herbs, limpwurt, bushes, and grape vines.
 	 *
-	 * Harvest: allotments, hops, celastrus, grape vines, coral nurseries,
-	 * and Herbiboars.
+	 * Harvest: allotments, hops, celastrus, grape vines, coral nurseries, and
+	 * Herbiboars.
 	 */
 	private static MenuEntry reorderMenuEntries(MenuEntry[] entries)
 	{
@@ -221,7 +194,7 @@ public class SecaTearsPlugin extends Plugin
 				continue;
 			}
 
-			if (isSecateursAction(option, entry.getTarget()))
+			if (isSecateursAction(entry))
 			{
 				actionIndex = i;
 			}
@@ -242,61 +215,173 @@ public class SecaTearsPlugin extends Plugin
 		return actionEntry;
 	}
 
-	private static boolean isSecateursAction(String option, String target)
+	private static boolean isSecateursAction(MenuEntry entry)
 	{
-		if (option == null || target == null)
+		if (entry == null)
+		{
+			return false;
+		}
+
+		String option = entry.getOption();
+		if (option == null)
 		{
 			return false;
 		}
 
 		String optionLower = option.toLowerCase();
-
-		if (optionLower.startsWith(PICK) && !optionLower.startsWith(PICKPOCKET))
+		if (optionLower.startsWith(PICKPOCKET))
 		{
-			return containsAny(normalizeTarget(target), SECATEURS_PICK_TARGETS);
+			return false;
+		}
+
+		MenuAction type = entry.getType();
+		if (isGameObjectAction(type))
+		{
+			return isSecateursPatchAction(optionLower, entry.getIdentifier());
+		}
+
+		if (isNpcAction(type))
+		{
+			return optionLower.contains(HARVEST) && isHerbiboar(entry.getNpc());
+		}
+
+		return false;
+	}
+
+	private static boolean isSecateursPatchAction(String optionLower, int objectId)
+	{
+		if (optionLower.startsWith(PICK))
+		{
+			return isSecateursPickObject(objectId);
 		}
 
 		if (optionLower.contains(HARVEST))
 		{
-			return containsAny(normalizeTarget(target), SECATEURS_HARVEST_TARGETS);
+			return isSecateursHarvestObject(objectId);
 		}
 
 		return false;
 	}
 
-	private static boolean containsAny(String text, String[] values)
+	private static boolean isGameObjectAction(MenuAction type)
 	{
-		for (String value : values)
-		{
-			if (text.contains(value))
-			{
-				return true;
-			}
-		}
-		return false;
+		return type == MenuAction.GAME_OBJECT_FIRST_OPTION
+			|| type == MenuAction.GAME_OBJECT_SECOND_OPTION
+			|| type == MenuAction.GAME_OBJECT_THIRD_OPTION
+			|| type == MenuAction.GAME_OBJECT_FOURTH_OPTION
+			|| type == MenuAction.GAME_OBJECT_FIFTH_OPTION;
 	}
 
-	private static String normalizeTarget(String t)
+	private static boolean isNpcAction(MenuAction type)
 	{
-		StringBuilder normalized = new StringBuilder(t.length());
-		boolean inTag = false;
-		for (int i = 0; i < t.length(); i++)
+		return type == MenuAction.NPC_FIRST_OPTION
+			|| type == MenuAction.NPC_SECOND_OPTION
+			|| type == MenuAction.NPC_THIRD_OPTION
+			|| type == MenuAction.NPC_FOURTH_OPTION
+			|| type == MenuAction.NPC_FIFTH_OPTION;
+	}
+
+	private static boolean isSecateursPickObject(int objectId)
+	{
+		return isBushObject(objectId)
+			|| isLimpwurtObject(objectId)
+			|| isHerbObject(objectId)
+			|| isGrapeVineObject(objectId);
+	}
+
+	private static boolean isSecateursHarvestObject(int objectId)
+	{
+		return isAllotmentObject(objectId)
+			|| isHopsObject(objectId)
+			|| isCelastrusObject(objectId)
+			|| isGrapeVineObject(objectId)
+			|| isCoralNurseryObject(objectId);
+	}
+
+	private static boolean isBushObject(int objectId)
+	{
+		return between(objectId, ObjectID.CADAVABERRY_BUSH_SEEDLING, ObjectID.WHITEBERRY_BUSH_FULLYGROWN_DEAD);
+	}
+
+	private static boolean isLimpwurtObject(int objectId)
+	{
+		return between(objectId, ObjectID.LIMPWURT_SEED, ObjectID.LIMPWURT_FULLYGROWN_DEAD);
+	}
+
+	private static boolean isHerbObject(int objectId)
+	{
+		return between(objectId, ObjectID.FARMING_HERB_PATCH_1, ObjectID.FARMING_HERB_PATCH_5)
+			|| objectId == ObjectID.FARMING_HERB_PATCH_6
+			|| between(objectId, ObjectID.HERB_GUAM_LEAF_1, ObjectID.HERB_GUAM_LEAF_FULLYGROWN)
+			|| between(objectId, ObjectID.MYARM_REALPATCH_HERB1_ACTIVE, ObjectID.MYARM_REALPATCH_HERB5_ACTIVE)
+			|| objectId == ObjectID1.FARMING_HERB_PATCH_7
+			|| objectId == ObjectID1.FARMING_HERB_PATCH_8
+			|| between(objectId, ObjectID1.HERB_MARRENTILL_SEED, ObjectID1.HERB_SNAPDRAGON_FULLYGROWN)
+			|| between(objectId, ObjectID1.MYARM_REALPATCH_HERB1_HUASCA_ACTIVE, ObjectID1.MYARM_REALPATCH_HERB5_HUASCA_ACTIVE)
+			|| between(objectId, ObjectID1.HERB_HUASCA_SEED, ObjectID1.HERB_HUASCA_FULLYGROWN)
+			|| between(objectId, ObjectID1.SOTE_HERB_SEED, ObjectID1.SOTE_HERB_3)
+			|| objectId == ObjectID1.SOTE_HERB_PATCH
+			|| objectId == ObjectID1.WGS_RICH_SNAPDRAGON_PATCH
+			|| objectId == ObjectID1.WGS_RICH_SNAPDRAGON_PATCH_WEEDED
+			|| between(objectId, ObjectID1.WGS_RICH_SNAPDRAGON_HERB_SEED, ObjectID1.WGS_RICH_SNAPDRAGON_HERB_FULLYGROWN);
+	}
+
+	private static boolean isAllotmentObject(int objectId)
+	{
+		return between(objectId, ObjectID.FARMING_VEG_PATCH_1, ObjectID.FARMING_VEG_PATCH_11)
+			|| between(objectId, ObjectID.CABBAGE_SEED, ObjectID.WATERMELON_7_DEAD)
+			|| between(objectId, ObjectID1.SNAPEGRASS_SEEDLING, ObjectID1.SNAPEGRASS_6_DEAD)
+			|| objectId == ObjectID1.FARMING_VEG_PATCH_12
+			|| objectId == ObjectID1.FARMING_VEG_PATCH_13
+			|| objectId == ObjectID1.FARMING_VEG_PATCH_14
+			|| objectId == ObjectID1.FARMING_VEG_PATCH_15
+			|| objectId == ObjectID1.FARMING_VEG_PATCH_16
+			|| objectId == ObjectID1.FARMING_VEG_PATCH_17;
+	}
+
+	private static boolean isHopsObject(int objectId)
+	{
+		return between(objectId, ObjectID.ASGARNIAN_HOPS_SEED, ObjectID.YANILLIAN_HOPS_5_DEAD)
+			|| objectId == ObjectID.FARMING_HOPS_PATCH_KELDAGRIM
+			|| objectId == ObjectID1.FARMING_HOPS_PATCH_5;
+	}
+
+	private static boolean isCelastrusObject(int objectId)
+	{
+		return between(objectId, ObjectID1.CELASTRUS_PATCH_WEEDED, ObjectID1.CELASTRUS_TREE_STUMP)
+			|| objectId == ObjectID1.FARMING_CELASTRUS_PATCH_1;
+	}
+
+	private static boolean isGrapeVineObject(int objectId)
+	{
+		return between(objectId, ObjectID.GRAPEVINE_GROWING_5, ObjectID.GRAPEVINE_CLICKZONE_DEAD)
+			|| between(objectId, ObjectID.GRAPEVINE_PATCH_CLICKZONE_01, ObjectID.GRAPEVINE_PATCH_CLICKZONE_08)
+			|| objectId == ObjectID.GRAPEVINE_PATCH_CLICKZONE_09
+			|| between(objectId, ObjectID.GRAPEVINE_PATCH_CLICKZONE_10, ObjectID.GRAPEVINE_PATCH_CLICKZONE_12)
+			|| between(objectId, ObjectID.GRAPEVINE_PATCH_01, ObjectID.GRAPEVINE_PATCH_04)
+			|| between(objectId, ObjectID.GRAPEVINE_PATCH_05, ObjectID.GRAPEVINE_PATCH_12);
+	}
+
+	private static boolean isCoralNurseryObject(int objectId)
+	{
+		return between(objectId, ObjectID1.CORAL_PATCH_EMPTY, ObjectID1.FARMING_CORAL_PATCH_2);
+	}
+
+	private static boolean isHerbiboar(NPC npc)
+	{
+		if (npc == null)
 		{
-			char c = t.charAt(i);
-			if (c == '<')
-			{
-				inTag = true;
-			}
-			else if (c == '>')
-			{
-				inTag = false;
-			}
-			else if (!inTag)
-			{
-				normalized.append(Character.toLowerCase(c));
-			}
+			return false;
 		}
-		return normalized.toString().trim();
+
+		int npcId = npc.getId();
+		return between(npcId, NpcID.FOSSIL_HERBIBOAR_VISIBLE, NpcID.FOSSIL_HERBIBOAR_ANIM_VISIBLE)
+			|| between(npcId, NpcID.FOSSIL_HERBIBOAR_1, NpcID.FOSSIL_HERBIBOAR_ANIMATE_9);
+	}
+
+	private static boolean between(int value, int min, int max)
+	{
+		return value >= min && value <= max;
 	}
 
 	private boolean hasMagicSecateurs()

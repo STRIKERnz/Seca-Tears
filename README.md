@@ -55,8 +55,8 @@ Overhead text duration in ticks (default: 5, ~3 s)
 1.0.1 - 2026-05-01
   - Fixed overly broad Pick matching so unrelated Pick actions are no longer
     moved or warned on
-  - Restricted warnings and menu reordering to actions whose targets match
-    crops affected by Magic secateurs
+  - Restricted warnings and menu reordering to supported farming object ids
+    and Herbiboar npc ids instead of relying on menu target names
   - Added coverage for current Magic secateurs yield sources: celastrus trees,
     grape vines, coral nurseries, and Herbiboars
   - Improved menu handling performance by sharing reorder logic, reordering
