@@ -208,7 +208,7 @@ public class SecaTearsPlugin extends Plugin
 	 */
 	private static boolean shouldReorder(String optionLower, String normalizedTarget)
 	{
-		if (optionLower.contains("pick"))
+		if (optionLower.startsWith("pick") && !optionLower.startsWith("pickpocket"))
 		{
 			return !isPickExcluded(normalizedTarget);
 		}
