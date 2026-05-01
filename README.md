@@ -47,3 +47,19 @@ Overhead text (default: "No Magic secateurs!")
 
 Overhead text duration in ticks (default: 5, ~3 s)
   How long the overhead text stays visible. 1 tick = 0.6 s. Range: 1-30.
+
+## Changelog
+
+**Fix** - Pickpocket NPC interactions are not affected.
+
+1.0.0 - 2026-05-01
+  - Initial release
+  - Moves Pick and Harvest below Inspect in the right-click menu when Magic
+    secateurs are not equipped or in inventory
+  - Covers herbs, limpwurt root, berry bushes (Pick-from), allotments and hops
+  - Left-click action follows the same reorder so single-clicking does not
+    immediately harvest
+  - Chat message and overhead text warnings when picking without secateurs
+  - All notifications are individually toggleable and text is customisable
+  - Overhead text duration is configurable (1-30 ticks)
+
