@@ -66,6 +66,11 @@ Overhead text duration in ticks (default: 5, ~3 s)
     own overhead warning text is cleared
   - Tightened menu text normalization and exact action/target matching to reduce
     false positives while keeping supported Magic secateurs yield sources
+  - Refactored protected menu action detection and reordering to reduce
+    duplicated menu target normalization while preserving supported crop and
+    Herbiboar behavior
+  - Changed the plugin startup message from INFO to DEBUG to avoid unnecessary
+    production log output
 
 1.0.1 - 2026-05-01
   - Fixed overly broad Pick matching so unrelated Pick actions are no longer
