@@ -11,6 +11,7 @@ import net.runelite.api.ItemContainer;
 import net.runelite.api.Menu;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
+import net.runelite.api.Player;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuEntryAdded;
@@ -37,6 +38,7 @@ public class SecaTearsPlugin extends Plugin
 	private static final String INSPECT = "inspect";
 	private static final String WALK_HERE = "walk here";
 	private static final String HERBIBOAR = "herbiboar";
+	private static final int NO_MENU_ENTRY = -1;
 
 	private static final Set<String> SECATEURS_PICK_OPTIONS = Set.of(
 		PICK,
@@ -86,18 +88,6 @@ public class SecaTearsPlugin extends Plugin
 		"coral nursery",
 		"herbiboar"
 	);
-
-	private static final class ProtectedAction
-	{
-		private final int index;
-		private final String safetyAnchor;
-
-		private ProtectedAction(int index, String safetyAnchor)
-		{
-			this.index = index;
-			this.safetyAnchor = safetyAnchor;
-		}
-	}
 
 	@Inject
 	private Client client;
@@ -195,10 +185,11 @@ public class SecaTearsPlugin extends Plugin
 			);
 		}
 
-		if (config.showOverheadText() && client.getLocalPlayer() != null)
+		Player localPlayer = client.getLocalPlayer();
+		if (config.showOverheadText() && localPlayer != null)
 		{
 			activeOverheadText = config.overheadText();
-			client.getLocalPlayer().setOverheadText(activeOverheadText);
+			localPlayer.setOverheadText(activeOverheadText);
 			overheadTicksRemaining = config.overheadTextDuration();
 		}
 	}
@@ -209,7 +200,7 @@ public class SecaTearsPlugin extends Plugin
 		if (overheadTicksRemaining > 0)
 		{
 			overheadTicksRemaining--;
-			if (overheadTicksRemaining == 0 && client.getLocalPlayer() != null)
+			if (overheadTicksRemaining == 0)
 			{
 				clearOverheadText();
 			}
@@ -219,10 +210,11 @@ public class SecaTearsPlugin extends Plugin
 	private void clearOverheadText()
 	{
 		overheadTicksRemaining = 0;
-		if (client.getLocalPlayer() != null && activeOverheadText != null
-			&& activeOverheadText.equals(client.getLocalPlayer().getOverheadText()))
+		Player localPlayer = client.getLocalPlayer();
+		if (localPlayer != null && activeOverheadText != null
+			&& activeOverheadText.equals(localPlayer.getOverheadText()))
 		{
-			client.getLocalPlayer().setOverheadText(null);
+			localPlayer.setOverheadText(null);
 		}
 		activeOverheadText = null;
 	}
@@ -253,27 +245,28 @@ public class SecaTearsPlugin extends Plugin
 			return null;
 		}
 
-		ProtectedAction action = findProtectedAction(entries);
-		if (action == null)
+		int actionIndex = findProtectedActionIndex(entries);
+		if (actionIndex == NO_MENU_ENTRY)
 		{
 			return null;
 		}
 
-		int anchorIndex = findOptionIndex(action.safetyAnchor, entries);
-		if (anchorIndex == -1 || action.index <= anchorIndex)
+		String normalizedTarget = normalizeMenuText(entries[actionIndex].getTarget());
+		int anchorIndex = findOptionIndex(requiredSafetyAnchor(normalizedTarget), entries);
+		if (anchorIndex == NO_MENU_ENTRY || actionIndex <= anchorIndex)
 		{
 			return null;
 		}
 
-		MenuEntry movedEntry = entries[action.index];
-		System.arraycopy(entries, anchorIndex, entries, anchorIndex + 1, action.index - anchorIndex);
+		MenuEntry movedEntry = entries[actionIndex];
+		System.arraycopy(entries, anchorIndex, entries, anchorIndex + 1, actionIndex - anchorIndex);
 		entries[anchorIndex] = movedEntry;
 		return movedEntry;
 	}
 
-	private static ProtectedAction findProtectedAction(MenuEntry[] entries)
+	private static int findProtectedActionIndex(MenuEntry[] entries)
 	{
-		ProtectedAction action = null;
+		int actionIndex = NO_MENU_ENTRY;
 		for (int i = 0; i < entries.length; i++)
 		{
 			MenuEntry entry = entries[i];
@@ -282,17 +275,17 @@ public class SecaTearsPlugin extends Plugin
 				continue;
 			}
 
-			action = new ProtectedAction(i, requiredSafetyAnchor(entry.getTarget()));
+			actionIndex = i;
 		}
 
-		return action;
+		return actionIndex;
 	}
 
 	private static int findOptionIndex(String option, MenuEntry[] entries)
 	{
 		if (option == null)
 		{
-			return -1;
+			return NO_MENU_ENTRY;
 		}
 
 		for (int i = 0; i < entries.length; i++)
@@ -304,17 +297,17 @@ public class SecaTearsPlugin extends Plugin
 			}
 		}
 
-		return -1;
+		return NO_MENU_ENTRY;
 	}
 
-	private static String requiredSafetyAnchor(String target)
+	private static String requiredSafetyAnchor(String normalizedTarget)
 	{
-		if (target == null)
+		if (normalizedTarget == null)
 		{
 			return null;
 		}
 
-		if (HERBIBOAR.equals(normalizeMenuText(target)))
+		if (HERBIBOAR.equals(normalizedTarget))
 		{
 			return WALK_HERE;
 		}
@@ -324,12 +317,12 @@ public class SecaTearsPlugin extends Plugin
 
 	static boolean isSecateursAction(MenuEntry entry)
 	{
-		if (entry == null || !isProtectedMenuAction(entry.getType(), entry.getTarget()))
+		if (entry == null)
 		{
 			return false;
 		}
 
-		return isSecateursAction(entry.getOption(), entry.getTarget());
+		return isSecateursAction(entry.getType(), entry.getOption(), entry.getTarget());
 	}
 
 	static boolean isSecateursAction(String option, String target)
@@ -341,7 +334,27 @@ public class SecaTearsPlugin extends Plugin
 
 		String normalizedOption = normalizeMenuText(option);
 		String normalizedTarget = normalizeMenuText(target);
+		return isSecateursActionNormalized(normalizedOption, normalizedTarget);
+	}
 
+	private static boolean isSecateursAction(MenuAction action, String option, String target)
+	{
+		if (option == null || target == null)
+		{
+			return false;
+		}
+
+		String normalizedTarget = normalizeMenuText(target);
+		if (!isProtectedMenuActionNormalized(action, normalizedTarget))
+		{
+			return false;
+		}
+
+		return isSecateursActionNormalized(normalizeMenuText(option), normalizedTarget);
+	}
+
+	private static boolean isSecateursActionNormalized(String normalizedOption, String normalizedTarget)
+	{
 		if (SECATEURS_PICK_OPTIONS.contains(normalizedOption))
 		{
 			return SECATEURS_PICK_TARGETS.contains(normalizedTarget);
@@ -356,6 +369,11 @@ public class SecaTearsPlugin extends Plugin
 	}
 
 	static boolean isProtectedMenuAction(MenuAction action, String target)
+	{
+		return isProtectedMenuActionNormalized(action, normalizeMenuText(target));
+	}
+
+	private static boolean isProtectedMenuActionNormalized(MenuAction action, String normalizedTarget)
 	{
 		if (action == null)
 		{
@@ -375,7 +393,7 @@ public class SecaTearsPlugin extends Plugin
 			case NPC_THIRD_OPTION:
 			case NPC_FOURTH_OPTION:
 			case NPC_FIFTH_OPTION:
-				return HERBIBOAR.equals(normalizeMenuText(target));
+				return HERBIBOAR.equals(normalizedTarget);
 			default:
 				return false;
 		}
