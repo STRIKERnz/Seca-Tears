@@ -38,7 +38,7 @@ public class SecaTearsPlugin extends Plugin
 		"limpwurt",
 		"berry",
 		"poison ivy",
-		"grape"
+		"grapes"
 	};
 
 	private static final String[] SECATEURS_HARVEST_TARGETS = {
@@ -60,7 +60,7 @@ public class SecaTearsPlugin extends Plugin
 		"krandorian",
 		"wildblood",
 		"celastrus",
-		"grape",
+		"grapes",
 		"coral nursery",
 		"herbiboar"
 	};
