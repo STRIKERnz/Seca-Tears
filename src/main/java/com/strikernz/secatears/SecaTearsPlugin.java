@@ -103,7 +103,7 @@ public class SecaTearsPlugin extends Plugin
 	protected void startUp()
 	{
 		hasMagicSecateurs = null;
-		log.info("Seca-Tears plugin started");
+		log.debug("Seca-Tears plugin started");
 	}
 
 	@Override
