@@ -18,11 +18,13 @@ This applies to crops where secateurs actually increase yield:
 
 - Herbs (Pick)
 - Limpwurt root (Pick)
-- Berry bushes (Pick)
+- Berry bushes, including poison ivy (Pick)
 - Allotments and hops (Harvest)
+- Celastrus trees, grape vines, coral nurseries, and Herbiboars
 
-It does **not** affect crops where secateurs have no effect, including trees, mushrooms,
-cacti, belladonna, seaweed, hespori, pineapple plants, and non-limpwurt flowers.
+It does **not** affect crops where secateurs have no effect, including most trees,
+mushrooms, cacti, belladonna, seaweed, hespori, pineapple plants, and
+non-limpwurt flowers.
 
 ## Why it matters
 
@@ -50,7 +52,20 @@ Overhead text duration in ticks (default: 5, ~3 s)
 
 ## Changelog
 
-**Fix** - Pickpocket NPC nolonger triggers overhead text and chat message
+1.0.1 - 2026-05-01
+  - Fixed overly broad Pick matching so unrelated Pick actions are no longer
+    moved or warned on
+  - Restricted warnings and menu reordering to actions whose targets match
+    crops affected by Magic secateurs
+  - Added coverage for current Magic secateurs yield sources: celastrus trees,
+    grape vines, coral nurseries, and Herbiboars
+  - Improved menu handling performance by sharing reorder logic, reordering
+    entries in-place, avoiding regex target cleanup, and caching Magic
+    secateurs inventory/equipment checks until those containers change
+  - Removed deprecated RuneLite client menu API usage in favour of the current
+    Menu API
+
+**Fix** - Pickpocket NPC no longer triggers overhead text and chat message
 
 1.0.0 - 2026-05-01
   - Initial release
@@ -62,4 +77,3 @@ Overhead text duration in ticks (default: 5, ~3 s)
   - Chat message and overhead text warnings when picking without secateurs
   - All notifications are individually toggleable and text is customisable
   - Overhead text duration is configurable (1-30 ticks)
-

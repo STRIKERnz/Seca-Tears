@@ -6,21 +6,19 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.ItemContainer;
+import net.runelite.api.Menu;
 import net.runelite.api.MenuEntry;
+import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
-import net.runelite.api.events.GameTick;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 @Slf4j
 @PluginDescriptor(
@@ -30,6 +28,43 @@ import java.util.List;
 )
 public class SecaTearsPlugin extends Plugin
 {
+	private static final String PICK = "pick";
+	private static final String PICKPOCKET = "pickpocket";
+	private static final String HARVEST = "harvest";
+	private static final String INSPECT = "inspect";
+
+	private static final String[] SECATEURS_PICK_TARGETS = {
+		"herb",
+		"limpwurt",
+		"berry",
+		"poison ivy",
+		"grape"
+	};
+
+	private static final String[] SECATEURS_HARVEST_TARGETS = {
+		"allotment",
+		"potato",
+		"onion",
+		"cabbage",
+		"tomato",
+		"sweetcorn",
+		"strawberry",
+		"watermelon",
+		"snape grass",
+		"hops",
+		"barley",
+		"hammerstone",
+		"asgarnian",
+		"jute",
+		"yanillian",
+		"krandorian",
+		"wildblood",
+		"celastrus",
+		"grape",
+		"coral nursery",
+		"herbiboar"
+	};
+
 	@Inject
 	private Client client;
 
@@ -37,10 +72,12 @@ public class SecaTearsPlugin extends Plugin
 	private SecaTearsConfig config;
 
 	private int overheadTicksRemaining = 0;
+	private Boolean hasMagicSecateurs;
 
 	@Override
 	protected void startUp()
 	{
+		hasMagicSecateurs = null;
 		log.info("Seca-Tears plugin started");
 	}
 
@@ -48,6 +85,7 @@ public class SecaTearsPlugin extends Plugin
 	protected void shutDown()
 	{
 		overheadTicksRemaining = 0;
+		hasMagicSecateurs = null;
 		if (client.getLocalPlayer() != null)
 		{
 			client.getLocalPlayer().setOverheadText(null);
@@ -64,40 +102,17 @@ public class SecaTearsPlugin extends Plugin
 		}
 
 		MenuEntry[] entries = event.getMenuEntries();
-		if (entries == null || entries.length < 2)
+		MenuEntry movedEntry = reorderMenuEntries(entries);
+		if (movedEntry == null)
 		{
 			return;
 		}
 
-		int actionIndex = -1;
-		int inspectIndex = -1;
-
-		for (int i = 0; i < entries.length; i++)
-		{
-			MenuEntry e = entries[i];
-			if (e == null) continue;
-			String opt = e.getOption();
-			if (opt == null) continue;
-			String ol = opt.toLowerCase();
-
-			if (shouldReorder(ol, normalizeTarget(e.getTarget()))) actionIndex = i;
-			else if (ol.contains("inspect")) inspectIndex = i;
-		}
-
-		if (actionIndex == -1 || inspectIndex == -1 || actionIndex <= inspectIndex)
-		{
-			return;
-		}
-
-		List<MenuEntry> list = new ArrayList<>(Arrays.asList(entries));
-		MenuEntry actionEntry = list.remove(actionIndex);
-		list.add(inspectIndex, actionEntry);
-		event.setMenuEntries(list.toArray(new MenuEntry[0]));
-		log.debug("Moved '{}' below 'Inspect'", actionEntry.getOption());
+		event.setMenuEntries(entries);
+		log.debug("Moved '{}' below 'Inspect'", movedEntry.getOption());
 	}
 
 	@Subscribe
-	@SuppressWarnings("deprecation")
 	public void onMenuEntryAdded(MenuEntryAdded event)
 	{
 		if (hasMagicSecateurs())
@@ -105,40 +120,19 @@ public class SecaTearsPlugin extends Plugin
 			return;
 		}
 
-		if (!shouldReorder(event.getOption().toLowerCase(), normalizeTarget(event.getTarget())))
+		if (!isSecateursAction(event.getOption(), event.getTarget()))
 		{
 			return;
 		}
 
-		MenuEntry[] entries = client.getMenuEntries();
-		if (entries == null || entries.length < 2)
+		Menu menu = client.getMenu();
+		MenuEntry[] entries = menu.getMenuEntries();
+		if (reorderMenuEntries(entries) == null)
 		{
 			return;
 		}
 
-		int actionIndex = -1;
-		int inspectIndex = -1;
-
-		for (int i = 0; i < entries.length; i++)
-		{
-			MenuEntry e = entries[i];
-			if (e == null) continue;
-			String opt = e.getOption();
-			if (opt == null) continue;
-			String ol = opt.toLowerCase();
-			if (shouldReorder(ol, normalizeTarget(e.getTarget()))) actionIndex = i;
-			else if (ol.contains("inspect")) inspectIndex = i;
-		}
-
-		if (actionIndex == -1 || inspectIndex == -1 || actionIndex <= inspectIndex)
-		{
-			return;
-		}
-
-		List<MenuEntry> list = new ArrayList<>(Arrays.asList(entries));
-		MenuEntry actionEntry = list.remove(actionIndex);
-		list.add(inspectIndex, actionEntry);
-		client.setMenuEntries(list.toArray(new MenuEntry[0]));
+		menu.setMenuEntries(entries);
 	}
 
 	@Subscribe
@@ -149,15 +143,7 @@ public class SecaTearsPlugin extends Plugin
 			return;
 		}
 
-		String option = event.getMenuOption();
-		String target = event.getMenuTarget();
-
-		if (option == null || target == null)
-		{
-			return;
-		}
-
-		if (!shouldReorder(option.toLowerCase(), normalizeTarget(target)))
+		if (!isSecateursAction(event.getMenuOption(), event.getMenuTarget()))
 		{
 			return;
 		}
@@ -192,63 +178,139 @@ public class SecaTearsPlugin extends Plugin
 		}
 	}
 
-	/**
-	 * Returns true if the menu action/target combination is one where
-	 * Magic secateurs increase yield and the menu should be reordered.
-	 *
-	 * Pick: reorder unless the target is a known non-benefiting patch
-	 *   (seaweed, cactus). Herbs, limpwurt root, and berry bushes all pass.
-	 *   Other random "Pick" world objects without an Inspect entry are safe
-	 *   because the reorder only fires when both Pick and Inspect are present.
-	 *
-	 * Harvest: reorder unless the target is a known non-benefiting crop:
-	 *   - Any tree (fruit trees, calquat, crystal tree)
-	 *   - Mushrooms, belladonna, hespori, pineapple, seaweed
-	 *   - Non-limpwurt flowers (marigold, rosemary, nasturtium, woad)
-	 */
-	private static boolean shouldReorder(String optionLower, String normalizedTarget)
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event)
 	{
-		if (optionLower.startsWith("pick") && !optionLower.startsWith("pickpocket"))
+		int containerId = event.getContainerId();
+		if (containerId == InventoryID.WORN || containerId == InventoryID.INV)
 		{
-			return !isPickExcluded(normalizedTarget);
+			hasMagicSecateurs = null;
+		}
+	}
+
+	/**
+	 * Reorders menu entries when the action/target combination is one where
+	 * Magic secateurs increase yield.
+	 *
+	 * Pick: herbs, limpwurt, bushes, and grape vines.
+	 *
+	 * Harvest: allotments, hops, celastrus, grape vines, coral nurseries,
+	 * and Herbiboars.
+	 */
+	private static MenuEntry reorderMenuEntries(MenuEntry[] entries)
+	{
+		if (entries == null || entries.length < 2)
+		{
+			return null;
 		}
 
-		if (optionLower.contains("harvest"))
+		int actionIndex = -1;
+		int inspectIndex = -1;
+
+		for (int i = 0; i < entries.length; i++)
 		{
-			return !isHarvestExcluded(normalizedTarget);
+			MenuEntry entry = entries[i];
+			if (entry == null)
+			{
+				continue;
+			}
+
+			String option = entry.getOption();
+			if (option == null)
+			{
+				continue;
+			}
+
+			if (isSecateursAction(option, entry.getTarget()))
+			{
+				actionIndex = i;
+			}
+			else if (option.equalsIgnoreCase(INSPECT))
+			{
+				inspectIndex = i;
+			}
+		}
+
+		if (actionIndex == -1 || inspectIndex == -1 || actionIndex <= inspectIndex)
+		{
+			return null;
+		}
+
+		MenuEntry actionEntry = entries[actionIndex];
+		System.arraycopy(entries, inspectIndex, entries, inspectIndex + 1, actionIndex - inspectIndex);
+		entries[inspectIndex] = actionEntry;
+		return actionEntry;
+	}
+
+	private static boolean isSecateursAction(String option, String target)
+	{
+		if (option == null || target == null)
+		{
+			return false;
+		}
+
+		String optionLower = option.toLowerCase();
+
+		if (optionLower.startsWith(PICK) && !optionLower.startsWith(PICKPOCKET))
+		{
+			return containsAny(normalizeTarget(target), SECATEURS_PICK_TARGETS);
+		}
+
+		if (optionLower.contains(HARVEST))
+		{
+			return containsAny(normalizeTarget(target), SECATEURS_HARVEST_TARGETS);
 		}
 
 		return false;
 	}
 
-	private static boolean isPickExcluded(String t)
+	private static boolean containsAny(String text, String[] values)
 	{
-		return t.contains("seaweed")
-			|| t.contains("cactus");
-	}
-
-	private static boolean isHarvestExcluded(String t)
-	{
-		return t.contains("tree")
-			|| t.contains("mushroom")
-			|| t.contains("cactus")
-			|| t.contains("belladonna")
-			|| t.contains("hespori")
-			|| t.contains("pineapple")
-			|| t.contains("seaweed")
-			|| t.contains("marigold")
-			|| t.contains("rosemary")
-			|| t.contains("nasturtium")
-			|| t.contains("woad");
+		for (String value : values)
+		{
+			if (text.contains(value))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static String normalizeTarget(String t)
 	{
-		if (t == null) return "";
-		return t.replaceAll("<[^>]+>", "").toLowerCase().trim();
+		StringBuilder normalized = new StringBuilder(t.length());
+		boolean inTag = false;
+		for (int i = 0; i < t.length(); i++)
+		{
+			char c = t.charAt(i);
+			if (c == '<')
+			{
+				inTag = true;
+			}
+			else if (c == '>')
+			{
+				inTag = false;
+			}
+			else if (!inTag)
+			{
+				normalized.append(Character.toLowerCase(c));
+			}
+		}
+		return normalized.toString().trim();
 	}
 
 	private boolean hasMagicSecateurs()
+	{
+		if (hasMagicSecateurs != null)
+		{
+			return hasMagicSecateurs;
+		}
+
+		hasMagicSecateurs = hasMagicSecateursUncached();
+		return hasMagicSecateurs;
+	}
+
+	private boolean hasMagicSecateursUncached()
 	{
 		ItemContainer equipment = client.getItemContainer(InventoryID.WORN);
 		if (equipment != null)
@@ -283,4 +345,3 @@ public class SecaTearsPlugin extends Plugin
 		return configManager.getConfig(SecaTearsConfig.class);
 	}
 }
-
