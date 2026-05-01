@@ -50,7 +50,7 @@ Overhead text duration in ticks (default: 5, ~3 s)
 
 ## Changelog
 
-**Fix** - Pickpocket NPC interactions are not affected.
+**Fix** - Pickpocket NPC nolonger triggers overhead text and chat message
 
 1.0.0 - 2026-05-01
   - Initial release
