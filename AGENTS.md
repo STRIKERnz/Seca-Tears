@@ -50,7 +50,8 @@
 
 ## Plugin Setup & Packaging
 
-- Rename everything from the template. Do not leave `com.example`, `ExamplePlugin`, `ExampleConfig`, or `example` as the config group. Rename the package path, class names, config group, `build.gradle` group, `settings.gradle` project name, and `runelite-plugin.properties`.
+- Rename everything from the template. Do not leave `com.example`, `ExamplePlugin`, `ExampleConfig`, or `example` as the config group. Rename the package path, class names, config group, `build.gradle` group (`pluginMainClass` and `group`), `settings.gradle` project name, and `runelite-plugin.properties`.
+- The test-source launcher class (e.g. `src/test/java/.../YourPluginTest.java`) must call `ExternalPluginManager.loadBuiltin(YourPlugin.class)` then `RuneLite.main(args)`. Update `pluginMainClass` in `build.gradle` to point to this class after renaming.
 - Do not include a `META-INF/services/net.runelite.client.plugins.Plugin` file.
 - Do not commit build artifacts — no `.class` files, `out/` directories, or `.tmp` directories.
 - `build.gradle` must target Java 11** and match the structure of the example-plugin template.
@@ -73,7 +74,7 @@ You cannot verify plugin behavior yourself. Even if you have screen-capture or c
 
 After completing a task, do not declare it done. Instead:
 
-1. Offer to launch RuneLite for the user by running `./gradlew run` from the plugin's root directory.
+1. Offer to launch RuneLite for the user by running `./gradlew run` from the plugin's root directory (launches with `--developer-mode --debug`). Use `./gradlew shadowJar` to build a distributable fat jar (output: `build/libs/*-all.jar`).
 2. Instruct the user to follow the "Using Jagex Accounts" instructions found at https://github.com/runelite/runelite/wiki/Using-Jagex-Accounts to login to the development client.
 3. Tell the user *what to test* — the specific behavior you changed, the golden path, and any edge cases worth exercising.
 4. Wait for the user to confirm the feature works in-game before considering the task complete. A clean JVM start is not a passing test.
