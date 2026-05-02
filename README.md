@@ -50,7 +50,7 @@ Defaults:
 
 ## Changelog
 
-### 1.1.0 - 2026-05-02
+### 1.0.2 - 2026-05-02
 
 - Restricted menu handling to supported farming patch object menus and Herbiboar
   NPC menus.
