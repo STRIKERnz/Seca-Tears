@@ -27,7 +27,6 @@ Seca-Tears only handles actions where Magic secateurs can improve yield:
 - Allotments
 - Hops
 - Celastrus trees
-- Grape vines
 - Coral nurseries
 - Herbiboar
 

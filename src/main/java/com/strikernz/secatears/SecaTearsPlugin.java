@@ -58,7 +58,6 @@ public class SecaTearsPlugin extends Plugin
 		"whiteberry bush",
 		"poison ivy",
 		"poison ivy bush",
-		"grape vine",
 		"grapes"
 	);
 
@@ -83,7 +82,7 @@ public class SecaTearsPlugin extends Plugin
 		"wildblood hops",
 		"celastrus",
 		"celastrus tree",
-		"grape vine",
+		"grapevine",
 		"grapes",
 		"coral nursery",
 		"herbiboar"
