@@ -1,79 +1,72 @@
 # Seca-Tears
 
-A RuneLite plugin that reminds you to equip your **Magic secateurs** before picking or harvesting crops that benefit from them.
+Seca-Tears is a plugin that helps prevent harvesting supported Farming patches without Magic secateurs equipped or in your inventory.
 
-<img width="1254" height="1254" alt="Image" src="https://github.com/user-attachments/assets/7fa6fa75-ba5a-4167-a3fe-31fe1dcb5cdf" />
+![Seca-Tears icon](icon.png)
 
-## What it does
+## Features
 
-When you do **not** have Magic secateurs equipped or in your inventory:
+- Moves supported `Pick`, `Pick-from`, and `Harvest` actions below a safer menu
+  option when Magic secateurs are missing.
+- Changes the default left-click action for supported patches, reducing accidental
+  single-click harvests.
+- Shows optional chatbox and overhead-text warnings if you still choose the
+  protected action.
+- Automatically returns menus to normal when Magic secateurs are equipped or in
+  your inventory.
 
-- **Moves "Pick" or "Harvest" below "Inspect"** in the right-click menu, making accidental mis-clicks less likely.
-- **Changes the left-click action** away from "Pick"/"Harvest", so a single click no longer immediately harvests the patch.
-- **Warns you** if you still click "Pick" or "Harvest" — via a **chat message** and/or **overhead text** above your character.
+## Supported Actions
 
-When you have Magic secateurs equipped or in your inventory, all behaviour returns to normal.
+Seca-Tears only handles actions where Magic secateurs can improve yield:
 
-This applies to crops where secateurs actually increase yield:
+- Herbs
+- Limpwurt roots
+- Berry bushes, including poison ivy
+- Allotments
+- Hops
+- Celastrus trees
+- Grape vines
+- Coral nurseries
+- Herbiboar
 
-- Herbs (Pick)
-- Limpwurt root (Pick)
-- Berry bushes, including poison ivy (Pick)
-- Allotments and hops (Harvest)
-- Celastrus trees, grape vines, coral nurseries, and Herbiboars
-
-It does **not** affect crops where secateurs have no effect, including most trees,
-mushrooms, cacti, belladonna, seaweed, hespori, pineapple plants, and
-non-limpwurt flowers.
-
-## Why it matters
-
-Picking or harvesting without Magic secateurs reduces your yield. This plugin makes it
-nearly impossible to forget them.
+The plugin ignores inventory items, widgets, players, ground items, overlays, and
+unrelated world menus, even when their option text also says `Pick` or `Harvest`.
 
 ## Configuration
 
-Open the RuneLite config panel and search for **Seca-Tears**.
+Open the RuneLite config panel and search for `Seca-Tears`.
 
-Chat message warning (default: on)
-  Show a warning in the chatbox when you pick or harvest without secateurs.
+By default, Seca-Tears shows both a chatbox warning and overhead text when you
+harvest without Magic secateurs. You can turn either warning off, customize the
+message text, and set how long overhead text stays visible.
 
-Chat message text
-  The chatbox message text. Customisable.
+Defaults:
 
-Overhead text warning (default: on)
-  Show text above your character when you pick or harvest without secateurs.
-
-Overhead text (default: "No Magic secateurs!")
-  The overhead text. Customisable.
-
-Overhead text duration in ticks (default: 5, ~3 s)
-  How long the overhead text stays visible. 1 tick = 0.6 s. Range: 1-30.
+- Chat message warning: on
+- Overhead text warning: on
+- Overhead text: `No Magic secateurs!`
+- Overhead text duration: 5 ticks, configurable from 1-30 ticks
 
 ## Changelog
 
-1.0.1 - 2026-05-01
-  - Fixed overly broad Pick matching so unrelated Pick actions are no longer
-    moved or warned on
-  - Restricted warnings and menu reordering to actions whose targets match
-    crops affected by Magic secateurs
-  - Added coverage for current Magic secateurs yield sources: celastrus trees,
-    grape vines, coral nurseries, and Herbiboars
-  - Improved menu handling performance by sharing reorder logic, reordering
-    entries in-place, avoiding regex target cleanup, and caching Magic
-    secateurs inventory/equipment checks until those containers change
-  - Removed deprecated RuneLite client menu API usage in favour of the current
-    Menu API
+### 1.1.0 - 2026-05-02
 
-**Fix** - Pickpocket NPC no longer triggers overhead text and chat message
+- Restricted menu handling to supported farming patch object menus and Herbiboar
+  NPC menus.
+- Ignored unrelated menus such as ground items, inventory items, widgets,
+  players, and RuneLite overlays.
+- Improved warning cleanup so only this plugin's overhead text is cleared.
+- Tightened action and target matching to reduce false positives.
+- Changed startup and shutdown logging to debug level.
 
-1.0.0 - 2026-05-01
-  - Initial release
-  - Moves Pick and Harvest below Inspect in the right-click menu when Magic
-    secateurs are not equipped or in inventory
-  - Covers herbs, limpwurt root, berry bushes (Pick-from), allotments and hops
-  - Left-click action follows the same reorder so single-clicking does not
-    immediately harvest
-  - Chat message and overhead text warnings when picking without secateurs
-  - All notifications are individually toggleable and text is customisable
-  - Overhead text duration is configurable (1-30 ticks)
+### 1.0.1 - 2026-05-01
+
+- Fixed overly broad `Pick` matching.
+- Added current Magic secateurs yield sources, including celastrus trees, grape
+  vines, coral nurseries, and Herbiboars.
+- Improved menu handling performance and migrated to the current RuneLite menu
+  API.
+
+### 1.0.0 - 2026-05-01
+
+- Initial release.
