@@ -3,7 +3,7 @@
 Seca-Tears is a plugin that helps prevent harvesting supported Farming patches without Magic secateurs equipped or in your inventory.
 
 <p align="center">
-  <img width="360" alt="Seca-Tears preview" src="https://github.com/user-attachments/assets/7fa6fa75-ba5a-4167-a3fe-31fe1dcb5cdf" />
+  <img width="180" alt="Seca-Tears preview" src="https://github.com/user-attachments/assets/7fa6fa75-ba5a-4167-a3fe-31fe1dcb5cdf" />
 </p>
 
 ## Features
