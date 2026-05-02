@@ -11,4 +11,3 @@ public class SecaTearsPluginTest
 		RuneLite.main(args);
 	}
 }
-
