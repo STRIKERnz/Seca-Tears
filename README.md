@@ -50,6 +50,13 @@ Defaults:
 
 ## Changelog
 
+### 1.0.3 - 2026-05-27
+
+- Fixed herbs and limpwurt menu reordering after RuneLite menu sort timing.
+- Added stricter object-id checks for farming bush `Pick` actions to avoid
+  unrelated `Pick` menus.
+- Reduced unnecessary object-definition lookups during menu handling.
+
 ### 1.0.2 - 2026-05-02
 
 - Restricted menu handling to supported farming patch object menus and Herbiboar
