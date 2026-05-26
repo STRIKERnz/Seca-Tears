@@ -11,14 +11,16 @@ import net.runelite.api.ItemContainer;
 import net.runelite.api.Menu;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
+import net.runelite.api.ObjectComposition;
 import net.runelite.api.Player;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
-import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.events.PostMenuSort;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
+import net.runelite.api.gameval.ObjectID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -36,7 +38,7 @@ public class SecaTearsPlugin extends Plugin
 	private static final String PICK_FROM = "pick-from";
 	private static final String HARVEST = "harvest";
 	private static final String INSPECT = "inspect";
-	private static final String WALK_HERE = "walk here";
+	private static final String EXAMINE = "examine";
 	private static final String HERBIBOAR = "herbiboar";
 	private static final int NO_MENU_ENTRY = -1;
 
@@ -49,16 +51,68 @@ public class SecaTearsPlugin extends Plugin
 		"herb",
 		"herbs",
 		"limpwurt",
+		"limpwurt plant",
 		"limpwurt root",
+		"berry",
+		"berries",
+		"redberry bush",
+		"cadavaberry bush",
+		"dwellberry bush",
+		"jangerberry bush",
+		"whiteberry bush",
+		"whiteberries",
+		"white berries",
+		"poison ivy",
+		"poison ivy bush",
+		"snape grass",
+		"snape grass plant",
+		"grapes"
+	);
+
+	private static final Set<String> SECATEURS_BUSH_PICK_TARGETS = Set.of(
 		"berry",
 		"redberry bush",
 		"cadavaberry bush",
 		"dwellberry bush",
 		"jangerberry bush",
 		"whiteberry bush",
+		"whiteberries",
+		"white berries",
 		"poison ivy",
-		"poison ivy bush",
-		"grapes"
+		"poison ivy bush"
+	);
+
+	private static final Set<Integer> SECATEURS_BUSH_OBJECT_IDS = Set.of(
+		ObjectID.REDBERRY_BUSH_FULLYGROWN,
+		ObjectID.REDBERRY_BUSH_BERRY_1,
+		ObjectID.REDBERRY_BUSH_BERRY_2,
+		ObjectID.REDBERRY_BUSH_BERRY_3,
+		ObjectID.REDBERRY_BUSH_BERRY_4,
+		ObjectID.CADAVABERRY_BUSH_FULLYGROWN,
+		ObjectID.CADAVABERRY_BUSH_BERRY_1,
+		ObjectID.CADAVABERRY_BUSH_BERRY_2,
+		ObjectID.CADAVABERRY_BUSH_BERRY_3,
+		ObjectID.CADAVABERRY_BUSH_BERRY_4,
+		ObjectID.DWELLBERRY_BUSH_FULLYGROWN,
+		ObjectID.DWELLBERRY_BUSH_BERRY_1,
+		ObjectID.DWELLBERRY_BUSH_BERRY_2,
+		ObjectID.DWELLBERRY_BUSH_BERRY_3,
+		ObjectID.DWELLBERRY_BUSH_BERRY_4,
+		ObjectID.JANGERBERRY_BUSH_FULLYGROWN,
+		ObjectID.JANGERBERRY_BUSH_BERRY_1,
+		ObjectID.JANGERBERRY_BUSH_BERRY_2,
+		ObjectID.JANGERBERRY_BUSH_BERRY_3,
+		ObjectID.JANGERBERRY_BUSH_BERRY_4,
+		ObjectID.WHITEBERRY_BUSH_FULLYGROWN,
+		ObjectID.WHITEBERRY_BUSH_BERRY_1,
+		ObjectID.WHITEBERRY_BUSH_BERRY_2,
+		ObjectID.WHITEBERRY_BUSH_BERRY_3,
+		ObjectID.WHITEBERRY_BUSH_BERRY_4,
+		ObjectID.POISONIVY_BUSH_FULLYGROWN,
+		ObjectID.POISONIVY_BUSH_BERRY_1,
+		ObjectID.POISONIVY_BUSH_BERRY_2,
+		ObjectID.POISONIVY_BUSH_BERRY_3,
+		ObjectID.POISONIVY_BUSH_BERRY_4
 	);
 
 	private static final Set<String> SECATEURS_HARVEST_TARGETS = Set.of(
@@ -71,6 +125,8 @@ public class SecaTearsPlugin extends Plugin
 		"strawberry",
 		"watermelon",
 		"snape grass",
+		"snape grass plant",
+		"snape grass patch",
 		"hops",
 		"barley",
 		"hammerstone hops",
@@ -122,37 +178,26 @@ public class SecaTearsPlugin extends Plugin
 		}
 
 		MenuEntry[] entries = event.getMenuEntries();
-		MenuEntry movedEntry = reorderMenuEntries(entries);
-		if (movedEntry == null)
+		if (reorderMenuEntries(entries))
 		{
-			return;
+			event.setMenuEntries(entries);
 		}
-
-		event.setMenuEntries(entries);
-		log.debug("Moved '{}' below safety entry", movedEntry.getOption());
 	}
 
-	@Subscribe
-	public void onMenuEntryAdded(MenuEntryAdded event)
+	@Subscribe(priority = -1.0f)
+	public void onPostMenuSort(PostMenuSort event)
 	{
 		if (hasMagicSecateurs())
 		{
 			return;
 		}
 
-		if (!isSecateursAction(event.getMenuEntry()))
-		{
-			return;
-		}
-
 		Menu menu = client.getMenu();
 		MenuEntry[] entries = menu.getMenuEntries();
-		if (reorderMenuEntries(entries) == null)
+		if (reorderMenuEntries(entries))
 		{
-			return;
+			menu.setMenuEntries(entries);
 		}
-
-		menu.setMenuEntries(entries);
 	}
 
 	@Subscribe
@@ -228,128 +273,102 @@ public class SecaTearsPlugin extends Plugin
 		}
 	}
 
-	/**
-	 * Reorders menu entries when the action/target combination is one where
-	 * Magic secateurs increase yield.
-	 *
-	 * Pick: herbs, limpwurt, bushes, and grape vines.
-	 *
-	 * Harvest: allotments, hops, celastrus, grape vines, coral nurseries,
-	 * and Herbiboars.
-	 */
-	static MenuEntry reorderMenuEntries(MenuEntry[] entries)
-	{
-		if (entries == null || entries.length < 2)
-		{
-			return null;
-		}
-
-		int actionIndex = findProtectedActionIndex(entries);
-		if (actionIndex == NO_MENU_ENTRY)
-		{
-			return null;
-		}
-
-		String normalizedTarget = normalizeMenuText(entries[actionIndex].getTarget());
-		int anchorIndex = findOptionIndex(requiredSafetyAnchor(normalizedTarget), entries);
-		if (anchorIndex == NO_MENU_ENTRY || actionIndex <= anchorIndex)
-		{
-			return null;
-		}
-
-		MenuEntry movedEntry = entries[actionIndex];
-		System.arraycopy(entries, anchorIndex, entries, anchorIndex + 1, actionIndex - anchorIndex);
-		entries[anchorIndex] = movedEntry;
-		return movedEntry;
-	}
-
-	private static int findProtectedActionIndex(MenuEntry[] entries)
-	{
-		int actionIndex = NO_MENU_ENTRY;
-		for (int i = 0; i < entries.length; i++)
-		{
-			MenuEntry entry = entries[i];
-			if (entry == null || !isSecateursAction(entry))
-			{
-				continue;
-			}
-
-			actionIndex = i;
-		}
-
-		return actionIndex;
-	}
-
-	private static int findOptionIndex(String option, MenuEntry[] entries)
-	{
-		if (option == null)
-		{
-			return NO_MENU_ENTRY;
-		}
-
-		for (int i = 0; i < entries.length; i++)
-		{
-			MenuEntry entry = entries[i];
-			if (entry != null && option.equals(normalizeMenuText(entry.getOption())))
-			{
-				return i;
-			}
-		}
-
-		return NO_MENU_ENTRY;
-	}
-
-	private static String requiredSafetyAnchor(String normalizedTarget)
-	{
-		if (normalizedTarget == null)
-		{
-			return null;
-		}
-
-		if (HERBIBOAR.equals(normalizedTarget))
-		{
-			return WALK_HERE;
-		}
-
-		return INSPECT;
-	}
-
-	static boolean isSecateursAction(MenuEntry entry)
+	private boolean isSecateursAction(MenuEntry entry)
 	{
 		if (entry == null)
 		{
 			return false;
 		}
 
-		return isSecateursAction(entry.getType(), entry.getOption(), entry.getTarget());
+		String normalizedTarget = normalizeMenuText(entry.getTarget());
+		if (!isProtectedMenuActionNormalized(entry.getType(), normalizedTarget))
+		{
+			return false;
+		}
+
+		String normalizedOption = normalizeMenuText(entry.getOption());
+		if (!isSecateursActionNormalized(normalizedOption, normalizedTarget))
+		{
+			return false;
+		}
+
+		return !requiresFarmingBushObjectId(normalizedOption, normalizedTarget)
+			|| SECATEURS_BUSH_OBJECT_IDS.contains(resolveObjectId(entry));
 	}
 
-	static boolean isSecateursAction(String option, String target)
+	private boolean reorderMenuEntries(MenuEntry[] entries)
 	{
-		if (option == null || target == null)
+		if (entries == null || entries.length < 2)
 		{
 			return false;
 		}
 
-		String normalizedOption = normalizeMenuText(option);
-		String normalizedTarget = normalizeMenuText(target);
-		return isSecateursActionNormalized(normalizedOption, normalizedTarget);
+		boolean changed = false;
+		for (int actionIndex = entries.length - 1; actionIndex >= 0; actionIndex--)
+		{
+			MenuEntry entry = entries[actionIndex];
+			if (!isSecateursAction(entry))
+			{
+				continue;
+			}
+
+			int anchorIndex = findSafetyAnchorIndex(entries, actionIndex);
+			if (anchorIndex == NO_MENU_ENTRY)
+			{
+				continue;
+			}
+
+			changed |= moveActionBehindAnchor(entries, actionIndex, anchorIndex);
+		}
+
+		return changed;
 	}
 
-	private static boolean isSecateursAction(MenuAction action, String option, String target)
+	private static boolean moveActionBehindAnchor(MenuEntry[] entries, int actionIndex, int anchorIndex)
 	{
-		if (option == null || target == null)
+		if (actionIndex == anchorIndex - 1)
 		{
 			return false;
 		}
 
-		String normalizedTarget = normalizeMenuText(target);
-		if (!isProtectedMenuActionNormalized(action, normalizedTarget))
+		MenuEntry movedEntry = entries[actionIndex];
+		if (actionIndex > anchorIndex)
 		{
-			return false;
+			System.arraycopy(entries, anchorIndex, entries, anchorIndex + 1, actionIndex - anchorIndex);
+			entries[anchorIndex] = movedEntry;
+			return true;
 		}
 
-		return isSecateursActionNormalized(normalizeMenuText(option), normalizedTarget);
+		System.arraycopy(entries, actionIndex + 1, entries, actionIndex, anchorIndex - actionIndex - 1);
+		entries[anchorIndex - 1] = movedEntry;
+		return true;
+	}
+
+	private static int findSafetyAnchorIndex(MenuEntry[] entries, int actionIndex)
+	{
+		String target = normalizeMenuText(entries[actionIndex].getTarget());
+		int examineIndex = NO_MENU_ENTRY;
+		for (int i = 0; i < entries.length; i++)
+		{
+			MenuEntry entry = entries[i];
+			if (i == actionIndex || entry == null || !target.equals(normalizeMenuText(entry.getTarget())))
+			{
+				continue;
+			}
+
+			String option = normalizeMenuText(entry.getOption());
+			if (INSPECT.equals(option))
+			{
+				return i;
+			}
+
+			if (EXAMINE.equals(option))
+			{
+				examineIndex = i;
+			}
+		}
+
+		return examineIndex;
 	}
 
 	private static boolean isSecateursActionNormalized(String normalizedOption, String normalizedTarget)
@@ -367,9 +386,31 @@ public class SecaTearsPlugin extends Plugin
 		return false;
 	}
 
-	static boolean isProtectedMenuAction(MenuAction action, String target)
+	private static boolean requiresFarmingBushObjectId(String normalizedOption, String normalizedTarget)
 	{
-		return isProtectedMenuActionNormalized(action, normalizeMenuText(target));
+		return SECATEURS_PICK_OPTIONS.contains(normalizedOption)
+			&& SECATEURS_BUSH_PICK_TARGETS.contains(normalizedTarget);
+	}
+
+	private int resolveObjectId(MenuEntry entry)
+	{
+		if (entry == null || !isObjectMenuAction(entry.getType()))
+		{
+			return NO_MENU_ENTRY;
+		}
+
+		int objectId = entry.getIdentifier();
+		ObjectComposition objectComposition = client.getObjectDefinition(objectId);
+		if (objectComposition != null && objectComposition.getImpostorIds() != null)
+		{
+			objectComposition = objectComposition.getImpostor();
+			if (objectComposition != null)
+			{
+				objectId = objectComposition.getId();
+			}
+		}
+
+		return objectId;
 	}
 
 	private static boolean isProtectedMenuActionNormalized(MenuAction action, String normalizedTarget)
@@ -393,6 +434,21 @@ public class SecaTearsPlugin extends Plugin
 			case NPC_FOURTH_OPTION:
 			case NPC_FIFTH_OPTION:
 				return HERBIBOAR.equals(normalizedTarget);
+			default:
+				return false;
+		}
+	}
+
+	private static boolean isObjectMenuAction(MenuAction action)
+	{
+		switch (action)
+		{
+			case GAME_OBJECT_FIRST_OPTION:
+			case GAME_OBJECT_SECOND_OPTION:
+			case GAME_OBJECT_THIRD_OPTION:
+			case GAME_OBJECT_FOURTH_OPTION:
+			case GAME_OBJECT_FIFTH_OPTION:
+				return true;
 			default:
 				return false;
 		}
