@@ -50,6 +50,11 @@ Defaults:
 
 ## Changelog
 
+### 1.0.4 - 2026-06-17
+
+- Fixed herb patch matching after Jagex changed grown herb object names from
+  generic `Herb` labels to specific herb names.
+
 ### 1.0.3 - 2026-05-27
 
 - Fixed herbs and limpwurt menu reordering after RuneLite menu sort timing.

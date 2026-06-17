@@ -48,8 +48,24 @@ public class SecaTearsPlugin extends Plugin
 	);
 
 	private static final Set<String> SECATEURS_PICK_TARGETS = Set.of(
-		"herb",
-		"herbs",
+		"guam",
+		"guam leaf",
+		"marrentill",
+		"tarromin",
+		"harralander",
+		"ranarr",
+		"ranarr weed",
+		"toadflax",
+		"irit",
+		"irit leaf",
+		"avantoe",
+		"kwuarm",
+		"snapdragon",
+		"cadantine",
+		"lantadyme",
+		"dwarf weed",
+		"torstol",
+		"huasca",
 		"limpwurt",
 		"limpwurt plant",
 		"limpwurt root",
@@ -371,7 +387,7 @@ public class SecaTearsPlugin extends Plugin
 		return examineIndex;
 	}
 
-	private static boolean isSecateursActionNormalized(String normalizedOption, String normalizedTarget)
+	static boolean isSecateursActionNormalized(String normalizedOption, String normalizedTarget)
 	{
 		if (SECATEURS_PICK_OPTIONS.contains(normalizedOption))
 		{
