@@ -48,6 +48,8 @@ public class SecaTearsPlugin extends Plugin
 	);
 
 	private static final Set<String> SECATEURS_PICK_TARGETS = Set.of(
+		"herb",
+		"herbs",
 		"guam",
 		"guam leaf",
 		"marrentill",
